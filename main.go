@@ -1,46 +1,82 @@
 package main
 
 import (
+	"flag"
 	"fmt"
+	"io"
 	"os"
 	"time"
 
 	ical "github.com/arran4/golang-ical"
+	"github.com/BurntSushi/toml"
 )
 
 type Event struct {
-	Date  time.Time
-	Title string
+	Date  string `toml:"date"`
+	Title string `toml:"title"`
 }
 
-type DateList struct {
-	Events []Event
+type Config struct {
+	Events []Event `toml:"events"`
 }
 
 func main() {
-	// Example events
-	events := DateList{
-		Events: []Event{
-			{Date: time.Date(2022, time.January, 25, 0, 0, 0, 0, time.UTC), Title: "Project Launch"},
-			{Date: time.Date(2023, time.March, 14, 0, 0, 0, 0, time.UTC), Title: "Product Release"},
-		},
+	configFile := flag.String("config", "", "Path to the config file (use '-' for stdin)")
+	outputFile := flag.String("output", "", "Path to the output file (use '-' for stdout)")
+	flag.Parse()
+
+	if *configFile == "" || *outputFile == "" {
+		fmt.Println("Both config and output flags are required")
+		flag.Usage()
+		return
 	}
 
-	// Generate iCal file
-	err := generateICal(events)
+	var config Config
+	var err error
+
+	if *configFile == "-" {
+		_, err = toml.NewDecoder(os.Stdin).Decode(&config)
+	} else {
+		_, err = toml.DecodeFile(*configFile, &config)
+	}
+
+	if err != nil {
+		fmt.Println("Error reading config file:", err)
+		return
+	}
+
+	var output io.Writer
+	if *outputFile == "-" {
+		output = os.Stdout
+	} else {
+		file, err := os.Create(*outputFile)
+		if err != nil {
+			fmt.Println("Error creating output file:", err)
+			return
+		}
+		defer file.Close()
+		output = file
+	}
+
+	err = generateICal(config, output)
 	if err != nil {
 		fmt.Println("Error generating iCal file:", err)
 	}
 }
 
-func generateICal(dates DateList) error {
+func generateICal(config Config, output io.Writer) error {
 	cal := ical.NewCalendar()
 	cal.SetMethod(ical.MethodPublish)
 
-	for _, event := range dates.Events {
-		anniversaries := getAnniversaries(event.Date)
+	for _, event := range config.Events {
+		date, err := time.Parse("2006-01-02", event.Date)
+		if err != nil {
+			fmt.Println("Error parsing date:", err)
+			continue
+		}
+		anniversaries := getAnniversaries(date)
 		for _, anniv := range anniversaries {
-			duration := getDuration(event.Date, anniv)
+			duration := getDuration(date, anniv)
 			icalEvent := cal.AddEvent(fmt.Sprintf("anniv-%s", anniv.Format("20060102")))
 			icalEvent.SetSummary(fmt.Sprintf("%s - %s", event.Title, duration))
 			icalEvent.SetStartAt(anniv)
@@ -48,13 +84,7 @@ func generateICal(dates DateList) error {
 		}
 	}
 
-	file, err := os.Create("anniversaries.ics")
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	_, err = file.Write([]byte(cal.Serialize()))
+	_, err := output.Write([]byte(cal.Serialize()))
 	return err
 }
 

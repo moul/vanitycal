@@ -79,8 +79,13 @@ func generateICal(config Config, output io.Writer) error {
 			duration := getDuration(date, anniv)
 			icalEvent := cal.AddEvent(fmt.Sprintf("anniv-%s", anniv.Format("20060102")))
 			icalEvent.SetSummary(fmt.Sprintf("%s - %s", event.Title, duration))
-			icalEvent.SetStartAt(anniv)
-			icalEvent.SetEndAt(anniv.Add(24 * time.Hour))
+
+			// fullday
+			icalEvent.SetProperty(ical.ComponentPropertyDtStart, anniv.UTC().Format("20060102"), ical.WithValue("DATE"))
+
+			// XXX: specific hours
+			//icalEvent.SetStartAt(anniv)
+			//icalEvent.SetEndAt(anniv.Add(24 * time.Hour))
 		}
 	}
 

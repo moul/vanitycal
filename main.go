@@ -121,14 +121,15 @@ func getAnniversaries(date time.Time) []time.Time {
 		date.AddDate(40, 0, 0),      // 40 years
 		date.AddDate(45, 0, 0),      // 45 years
 		date.AddDate(50, 0, 0),      // 50 years
+		date.AddDate(0, 0, 7),       // 7 days
 		date.AddDate(0, 0, 100),     // 100 days
 		date.AddDate(0, 0, 1_000),   // 1 000 days
 		date.AddDate(0, 0, 10_000),  // 10 000 days
-		date.AddDate(0, 0, 100_000), // 100 000 days
 		date.AddDate(0, 1, 0),       // 1 month
 		date.AddDate(0, 2, 0),       // 2 month
 		date.AddDate(0, 3, 0),       // 3 month
 		date.AddDate(0, 6, 0),       // 6 months
+		date.AddDate(0, 9, 0),       // 9 months
 	}
 }
 
@@ -143,10 +144,6 @@ func getDuration(start, end time.Time) string {
 		return fmt.Sprintf("%dy", months/12)
 	} else if months > 0 && end.AddDate(0, -months, 0).Equal(start) {
 		return fmt.Sprintf("%dm", months)
-	} else if days >= 1000 && end.AddDate(0, 0, -days).Equal(start) {
-		return fmt.Sprintf("%dd", days)
-	} else if days >= 100 && end.AddDate(0, 0, -days).Equal(start) {
-		return fmt.Sprintf("%dd", days)
 	} else {
 		return fmt.Sprintf("%dd", days)
 	}

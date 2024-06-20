@@ -12,8 +12,9 @@ import (
 )
 
 type Event struct {
-	Date  string `toml:"date"`
-	Title string `toml:"title"`
+	Date        string `toml:"date"`
+	Title       string `toml:"title"`
+	Description string `toml:"description"`
 }
 
 type Config struct {
@@ -87,6 +88,9 @@ func generateICal(config Config, output io.Writer) error {
 			icalEvent := cal.AddEvent(uuid)
 			summary := fmt.Sprintf("%s - %s 💚", event.Title, duration)
 			icalEvent.SetSummary(summary)
+			if event.Description != "" {
+				icalEvent.SetDescription(event.Description)
+			}
 
 			// fullday
 			icalEvent.SetProperty(ical.ComponentPropertyDtStart, anniv.UTC().Format("20060102"), ical.WithValue("DATE"))
@@ -103,33 +107,33 @@ func generateICal(config Config, output io.Writer) error {
 
 func getAnniversaries(date time.Time) []time.Time {
 	return []time.Time{
-		date.AddDate(1, 0, 0),       // 1 year
-		date.AddDate(2, 0, 0),       // 2 years
-		date.AddDate(3, 0, 0),       // 3 years
-		date.AddDate(4, 0, 0),       // 4 years
-		date.AddDate(5, 0, 0),       // 5 years
-		date.AddDate(6, 0, 0),       // 6 years
-		date.AddDate(7, 0, 0),       // 7 years
-		date.AddDate(8, 0, 0),       // 8 years
-		date.AddDate(9, 0, 0),       // 9 years
-		date.AddDate(10, 0, 0),      // 10 years
-		date.AddDate(15, 0, 0),      // 15 years
-		date.AddDate(20, 0, 0),      // 20 years
-		date.AddDate(25, 0, 0),      // 25 years
-		date.AddDate(30, 0, 0),      // 30 years
-		date.AddDate(35, 0, 0),      // 35 years
-		date.AddDate(40, 0, 0),      // 40 years
-		date.AddDate(45, 0, 0),      // 45 years
-		date.AddDate(50, 0, 0),      // 50 years
-		date.AddDate(0, 0, 7),       // 7 days
-		date.AddDate(0, 0, 100),     // 100 days
-		date.AddDate(0, 0, 1_000),   // 1 000 days
-		date.AddDate(0, 0, 10_000),  // 10 000 days
-		date.AddDate(0, 1, 0),       // 1 month
-		date.AddDate(0, 2, 0),       // 2 month
-		date.AddDate(0, 3, 0),       // 3 month
-		date.AddDate(0, 6, 0),       // 6 months
-		date.AddDate(0, 9, 0),       // 9 months
+		date.AddDate(1, 0, 0),      // 1 year
+		date.AddDate(2, 0, 0),      // 2 years
+		date.AddDate(3, 0, 0),      // 3 years
+		date.AddDate(4, 0, 0),      // 4 years
+		date.AddDate(5, 0, 0),      // 5 years
+		date.AddDate(6, 0, 0),      // 6 years
+		date.AddDate(7, 0, 0),      // 7 years
+		date.AddDate(8, 0, 0),      // 8 years
+		date.AddDate(9, 0, 0),      // 9 years
+		date.AddDate(10, 0, 0),     // 10 years
+		date.AddDate(15, 0, 0),     // 15 years
+		date.AddDate(20, 0, 0),     // 20 years
+		date.AddDate(25, 0, 0),     // 25 years
+		date.AddDate(30, 0, 0),     // 30 years
+		date.AddDate(35, 0, 0),     // 35 years
+		date.AddDate(40, 0, 0),     // 40 years
+		date.AddDate(45, 0, 0),     // 45 years
+		date.AddDate(50, 0, 0),     // 50 years
+		date.AddDate(0, 0, 7),      // 7 days
+		date.AddDate(0, 0, 100),    // 100 days
+		date.AddDate(0, 0, 1_000),  // 1 000 days
+		date.AddDate(0, 0, 10_000), // 10 000 days
+		date.AddDate(0, 1, 0),      // 1 month
+		date.AddDate(0, 2, 0),      // 2 month
+		date.AddDate(0, 3, 0),      // 3 month
+		date.AddDate(0, 6, 0),      // 6 months
+		date.AddDate(0, 9, 0),      // 9 months
 	}
 }
 

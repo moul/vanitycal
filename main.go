@@ -42,8 +42,7 @@ func main() {
 	}
 
 	if err != nil {
-		fmt.Println("Error reading config file:", err)
-		return
+		panic(fmt.Errorf("Error reading config file: %w", err))
 	}
 
 	var output io.Writer
@@ -52,8 +51,7 @@ func main() {
 	} else {
 		file, err := os.Create(*outputFile)
 		if err != nil {
-			fmt.Println("Error creating output file:", err)
-			return
+			panic(fmt.Errorf("Error creating output file: %w", err))
 		}
 		defer file.Close()
 		output = file
@@ -61,7 +59,7 @@ func main() {
 
 	err = generateICal(config, output)
 	if err != nil {
-		fmt.Println("Error generating iCal file:", err)
+		panic(fmt.Errorf("Error generating ics file: %w", err))
 	}
 }
 
@@ -78,8 +76,7 @@ func generateICal(config Config, output io.Writer) error {
 	for _, event := range config.Events {
 		date, err := time.Parse("2006-01-02", event.Date)
 		if err != nil {
-			fmt.Println("Error parsing date:", err)
-			continue
+			return fmt.Errorf("Error parsing date: %w", err)
 		}
 		anniversaries := getAnniversaries(date)
 		for _, anniv := range anniversaries {

@@ -104,6 +104,7 @@ func generateICal(config Config, output io.Writer) error {
 
 func getAnniversaries(date time.Time) []time.Time {
 	return []time.Time{
+		date,                       // d day
 		date.AddDate(1, 0, 0),      // 1 year
 		date.AddDate(2, 0, 0),      // 2 years
 		date.AddDate(3, 0, 0),      // 3 years
@@ -139,6 +140,9 @@ func getDuration(start, end time.Time) string {
 	months := int(end.Sub(start).Hours() / (24 * 30))
 	days := int(end.Sub(start).Hours() / 24)
 
+	if end == start {
+		return "D-DAY"
+	}
 	if years > 0 && end.AddDate(-years, 0, 0).Equal(start) {
 		return fmt.Sprintf("%dy", years)
 	} else if months >= 12 && end.AddDate(0, -months, 0).Equal(start) {

@@ -8,6 +8,38 @@ import (
 	"time"
 )
 
+func TestGetCountdownDuration(t *testing.T) {
+	tests := []struct {
+		name     string
+		from     string
+		to       string
+		expected string
+	}{
+		{"D-Day", "2024-01-01", "2024-01-01", "D-DAY"},
+		{"1 day before", "2024-01-01", "2024-01-02", "D-1"},
+		{"2 days before", "2024-01-01", "2024-01-03", "D-2"},
+		{"3 days before", "2024-01-01", "2024-01-04", "D-3"},
+		{"5 days before", "2024-01-01", "2024-01-06", "D-5"},
+		{"7 days before", "2024-01-01", "2024-01-08", "D-7"},
+		{"10 days before", "2024-01-01", "2024-01-11", "D-10"},
+		{"100 days before", "2024-01-01", "2024-04-10", "D-100"},
+		{"1 month before", "2024-01-01", "2024-02-01", "D-1m"},
+		{"1 year before", "2024-01-01", "2025-01-01", "D-1y"},
+		{"Past date", "2024-01-02", "2024-01-01", "D-DAY"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			from, _ := time.Parse("2006-01-02", tt.from)
+			to, _ := time.Parse("2006-01-02", tt.to)
+			result := getCountdownDuration(from, to)
+			if result != tt.expected {
+				t.Errorf("getCountdownDuration(%s, %s) = %s; want %s", tt.from, tt.to, result, tt.expected)
+			}
+		})
+	}
+}
+
 func TestGetDuration(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -333,6 +365,52 @@ func TestGenerateICal(t *testing.T) {
 		// Ensure no duration is shown for recurring events
 		if strings.Contains(output, " - ") {
 			t.Error("Recurring events should not show duration")
+		}
+	})
+
+	t.Run("Countdown events", func(t *testing.T) {
+		// Set a fixed future date for testing
+		futureDate := time.Now().AddDate(0, 3, 10) // 3 months and 10 days from now
+		
+		config := Config{
+			Timezone:     "UTC",
+			CalendarName: "Test Calendar",
+			Anniversaries: Anniversary{
+				Years:  []int{1},
+				Months: []int{1, 3},
+				Days:   []int{7, 100},
+			},
+			Events: []Event{
+				{
+					Date:        futureDate.Format("2006-01-02"),
+					Title:       "Big Launch",
+					Description: "Product launch date",
+				},
+			},
+		}
+
+		var buf bytes.Buffer
+		err := generateICal(config, &buf)
+		if err != nil {
+			t.Fatalf("generateICal() error = %v", err)
+		}
+
+		output := buf.String()
+
+		// Check for countdown markers
+		expectedPatterns := []string{
+			"SUMMARY:Big Launch - D-DAY 💚",
+			"SUMMARY:Big Launch - D-7",
+			"SUMMARY:Big Launch - D-100",
+			"SUMMARY:Big Launch - D-1m",
+			"SUMMARY:Big Launch - D-3m",
+			"DESCRIPTION:Product launch date",
+		}
+
+		for _, pattern := range expectedPatterns {
+			if !strings.Contains(output, pattern) {
+				t.Errorf("generateICal() countdown output missing %q", pattern)
+			}
 		}
 	})
 }

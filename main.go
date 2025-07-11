@@ -12,7 +12,7 @@ import (
 )
 
 type Event struct {
-	Date        string `toml:"date"`        // YYYY-MM-DD for anniversaries
+	Date        string `toml:"date"`        // YYYY-MM-DD for anniversaries or countdowns
 	MonthDay    string `toml:"month_day"`   // MM-DD for recurring annual events
 	Title       string `toml:"title"`
 	Description string `toml:"description"`
@@ -111,6 +111,7 @@ func validateConfig(config Config) error {
 				return fmt.Errorf("event %d: invalid month_day format '%s' (expected MM-DD)", i+1, event.MonthDay)
 			}
 		}
+		
 	}
 
 	return nil
@@ -151,6 +152,26 @@ func generateICal(config Config, output io.Writer) error {
 			if err != nil {
 				return fmt.Errorf("Error parsing date: %w", err)
 			}
+			// For future dates, generate BOTH countdown and anniversary events
+			if date.After(time.Now()) {
+				// First, generate countdown events
+				countdowns := getCountdowns(date, config.Anniversaries)
+				for _, countdown := range countdowns {
+					duration := getCountdownDuration(countdown, date)
+					uuid := fmt.Sprintf("vanitycal-countdown-%s", countdown.Format("20060102"))
+					icalEvent := cal.AddEvent(uuid)
+					summary := fmt.Sprintf("%s - %s 💚", event.Title, duration)
+					icalEvent.SetSummary(summary)
+					if event.Description != "" {
+						icalEvent.SetDescription(event.Description)
+					}
+
+					// fullday
+					icalEvent.SetProperty(ical.ComponentPropertyDtStart, countdown.UTC().Format("20060102"), ical.WithValue("DATE"))
+				}
+			}
+			
+			// Always generate anniversary events (for both past and future dates)
 			anniversaries := getAnniversaries(date, config.Anniversaries)
 			for _, anniv := range anniversaries {
 				duration := getDuration(date, anniv)
@@ -243,6 +264,123 @@ func getAnniversaries(date time.Time, patterns Anniversary) []time.Time {
 	}
 
 	return anniversaries
+}
+
+func getCountdowns(targetDate time.Time, patterns Anniversary) []time.Time {
+	var countdowns []time.Time
+	today := time.Now()
+
+	// Only generate countdowns for future dates
+	if targetDate.Before(today) || targetDate.Equal(today) {
+		return countdowns
+	}
+
+	// Add day-based countdowns
+	for _, days := range patterns.Days {
+		if days == 0 {
+			continue // Skip D-Day for countdowns
+		}
+		countdown := targetDate.AddDate(0, 0, -days)
+		if countdown.After(today) {
+			countdowns = append(countdowns, countdown)
+		}
+	}
+
+	// Add month-based countdowns
+	for _, months := range patterns.Months {
+		countdown := targetDate.AddDate(0, -months, 0)
+		if countdown.After(today) {
+			countdowns = append(countdowns, countdown)
+		}
+	}
+
+	// Add year-based countdowns
+	for _, years := range patterns.Years {
+		countdown := targetDate.AddDate(-years, 0, 0)
+		if countdown.After(today) {
+			countdowns = append(countdowns, countdown)
+		}
+	}
+
+	return countdowns
+}
+
+func getCountdownDuration(from, to time.Time) string {
+	if from.Equal(to) || from.After(to) {
+		return "D-DAY"
+	}
+
+	// For countdowns, we show time remaining (from is before to)
+	totalDays := int(to.Sub(from).Hours() / 24)
+
+	// Check for specific day milestones first
+	switch totalDays {
+	case 1:
+		return "D-1"
+	case 2:
+		return "D-2"
+	case 3:
+		return "D-3" 
+	case 5:
+		return "D-5"
+	case 7:
+		return "D-7"
+	case 10:
+		return "D-10"
+	case 30:
+		return "D-30"
+	case 60:
+		return "D-60"
+	case 90:
+		return "D-90"
+	case 100:
+		return "D-100"
+	case 365:
+		return "D-365"
+	case 1000:
+		return "D-1000"
+	}
+
+	// Check for exact month/year matches
+	years := to.Year() - from.Year()
+	months := int(to.Month() - from.Month())
+	days := to.Day() - from.Day()
+
+	// Adjust for negative months
+	if months < 0 {
+		years--
+		months += 12
+	}
+
+	// Adjust for negative days
+	if days < 0 {
+		months--
+		if months < 0 {
+			years--
+			months += 12
+		}
+		prevMonth := to.AddDate(0, -1, 0)
+		days += time.Date(prevMonth.Year(), prevMonth.Month()+1, 0, 0, 0, 0, 0, prevMonth.Location()).Day()
+	}
+
+	// Return formatted countdown
+	if years > 0 && months == 0 && days == 0 {
+		return fmt.Sprintf("D-%dy", years)
+	} else if years == 0 && months > 0 && days == 0 {
+		return fmt.Sprintf("D-%dm", months)
+	} else if totalDays < 30 {
+		return fmt.Sprintf("D-%d", totalDays)
+	} else {
+		// Calculate total months for cleaner display
+		totalMonths := months + years*12
+		if totalMonths > 0 && totalMonths < 12 {
+			return fmt.Sprintf("D-%dm", totalMonths)
+		} else if totalMonths >= 12 {
+			return fmt.Sprintf("D-%dy", totalMonths/12)
+		} else {
+			return fmt.Sprintf("D-%d", totalDays)
+		}
+	}
 }
 
 func getDuration(start, end time.Time) string {

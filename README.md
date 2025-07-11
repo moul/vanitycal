@@ -29,11 +29,16 @@ days = [0, 7, 100, 1000, 10000]  # 0 = D-Day
 
 # Events (use either date OR month_day, not both)
 
-# Anniversary events (with year)
+# Anniversary events (past dates)
 [[events]]
 date = "2020-03-15"
 title = "Company Founded"
 description = "Optional description"
+
+# Future events (auto-detected, generates both countdown AND anniversaries)
+[[events]]
+date = "2025-06-20"
+title = "Product Launch"  # Generates D-7, D-30, etc. AND 7d, 1y, etc.
 
 # Recurring annual events (no year)
 [[events]]

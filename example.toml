@@ -39,6 +39,17 @@ title = "Series A Funding"
 date = "2023-01-10"
 title = "100th Employee"
 
+# Countdown events - automatically detected for future dates
+# These create calendar entries like D-7, D-30, D-100, D-1y before the target date
+[[events]]
+date = "2025-12-31"
+title = "Project Deadline"
+description = "Major milestone delivery"
+
+[[events]]
+date = "2026-06-15"
+title = "Conference Talk"
+
 # Recurring annual events - these appear every year (previous, current, next)
 # Use month_day instead of date for events without a specific year
 [[events]]

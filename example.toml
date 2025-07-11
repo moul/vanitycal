@@ -1,0 +1,51 @@
+# VanityCal Configuration Example
+# This file demonstrates all available configuration options
+
+# Calendar-wide settings (all optional, showing defaults)
+timezone = "Europe/Paris"
+calendar_name = "VanityCal 💚"
+
+# Anniversary patterns (all optional)
+# If not specified, uses the defaults shown below
+[anniversaries]
+# Years to generate anniversaries for
+years = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30, 35, 40, 45, 50]
+
+# Months to generate anniversaries for
+months = [1, 2, 3, 6, 9]
+
+# Days to generate anniversaries for (0 = D-Day/original date)
+days = [0, 7, 100, 1000, 10000]
+
+# Events to track (required)
+[[events]]
+date = "2020-03-15"
+title = "Company Founded"
+description = "Started our journey in the garage"
+
+[[events]]
+date = "2021-06-20"
+title = "Product Launch"
+description = "Launched v1.0 to the public"
+
+[[events]]
+date = "2022-09-01"
+title = "Series A Funding"
+# description is optional
+
+[[events]]
+date = "2023-01-10"
+title = "100th Employee"
+
+# Minimal configuration example:
+# You can customize just what you need, for example only tracking
+# 1, 5, and 10 year anniversaries:
+#
+# [anniversaries]
+# years = [1, 5, 10]
+# months = []
+# days = [0]  # Just D-Day
+#
+# [[events]]
+# date = "2024-01-01"
+# title = "Minimal Event"

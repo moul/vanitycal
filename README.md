@@ -27,11 +27,22 @@ years = [1, 2, 3, 4, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50]
 months = [1, 2, 3, 6, 9]
 days = [0, 7, 100, 1000, 10000]  # 0 = D-Day
 
-# Required
+# Events (use either date OR month_day, not both)
+
+# Anniversary events (with year)
 [[events]]
 date = "2020-03-15"
 title = "Company Founded"
 description = "Optional description"
+
+# Recurring annual events (no year)
+[[events]]
+month_day = "12-25"
+title = "Christmas"
+
+[[events]]
+month_day = "07-04"
+title = "Independence Day"
 ```
 
 ## Examples

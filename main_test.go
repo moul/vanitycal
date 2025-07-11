@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -66,7 +67,7 @@ func TestValidateConfig(t *testing.T) {
 				Events: []Event{{Date: "", Title: "Test"}},
 			},
 			wantErr: true,
-			errMsg:  "date is required",
+			errMsg:  "either date or month_day is required",
 		},
 		{
 			name: "Invalid date format",
@@ -89,6 +90,37 @@ func TestValidateConfig(t *testing.T) {
 				Events: []Event{{Date: "2023-01-01", Title: "Test Event", Description: "A test"}},
 			},
 			wantErr: false,
+		},
+		{
+			name: "Valid recurring event",
+			config: Config{
+				Events: []Event{{MonthDay: "12-25", Title: "Christmas"}},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Invalid month_day format",
+			config: Config{
+				Events: []Event{{MonthDay: "25/12", Title: "Christmas"}},
+			},
+			wantErr: true,
+			errMsg:  "invalid month_day format",
+		},
+		{
+			name: "Both date and month_day specified",
+			config: Config{
+				Events: []Event{{Date: "2023-01-01", MonthDay: "01-01", Title: "Test"}},
+			},
+			wantErr: true,
+			errMsg:  "cannot specify both date and month_day",
+		},
+		{
+			name: "Neither date nor month_day specified",
+			config: Config{
+				Events: []Event{{Title: "Test"}},
+			},
+			wantErr: true,
+			errMsg:  "either date or month_day is required",
 		},
 	}
 
@@ -211,50 +243,98 @@ func TestGetAnniversaries(t *testing.T) {
 }
 
 func TestGenerateICal(t *testing.T) {
-	config := Config{
-		Timezone:     "UTC",
-		CalendarName: "Test Calendar",
-		Anniversaries: Anniversary{
-			Years:  []int{1},
-			Months: []int{1},
-			Days:   []int{0},
-		},
-		Events: []Event{
-			{
-				Date:        "2023-01-01",
-				Title:       "Test Event",
-				Description: "Test Description",
+	t.Run("Anniversary events", func(t *testing.T) {
+		config := Config{
+			Timezone:     "UTC",
+			CalendarName: "Test Calendar",
+			Anniversaries: Anniversary{
+				Years:  []int{1},
+				Months: []int{1},
+				Days:   []int{0},
 			},
-		},
-	}
-
-	var buf bytes.Buffer
-	err := generateICal(config, &buf)
-	if err != nil {
-		t.Fatalf("generateICal() error = %v", err)
-	}
-
-	output := buf.String()
-
-	// Check for required iCal components
-	checks := []string{
-		"BEGIN:VCALENDAR",
-		"END:VCALENDAR",
-		"NAME:Test Calendar",
-		"TIMEZONE-ID:UTC",
-		"BEGIN:VEVENT",
-		"END:VEVENT",
-		"SUMMARY:Test Event - D-DAY 💚",
-		"DESCRIPTION:Test Description",
-		"SUMMARY:Test Event - 1m 💚",
-		"SUMMARY:Test Event - 1y 💚",
-	}
-
-	for _, check := range checks {
-		if !strings.Contains(output, check) {
-			t.Errorf("generateICal() output missing %q", check)
+			Events: []Event{
+				{
+					Date:        "2023-01-01",
+					Title:       "Test Event",
+					Description: "Test Description",
+				},
+			},
 		}
-	}
+
+		var buf bytes.Buffer
+		err := generateICal(config, &buf)
+		if err != nil {
+			t.Fatalf("generateICal() error = %v", err)
+		}
+
+		output := buf.String()
+
+		// Check for required iCal components
+		checks := []string{
+			"BEGIN:VCALENDAR",
+			"END:VCALENDAR",
+			"NAME:Test Calendar",
+			"TIMEZONE-ID:UTC",
+			"BEGIN:VEVENT",
+			"END:VEVENT",
+			"SUMMARY:Test Event - D-DAY 💚",
+			"DESCRIPTION:Test Description",
+			"SUMMARY:Test Event - 1m 💚",
+			"SUMMARY:Test Event - 1y 💚",
+		}
+
+		for _, check := range checks {
+			if !strings.Contains(output, check) {
+				t.Errorf("generateICal() output missing %q", check)
+			}
+		}
+	})
+
+	t.Run("Recurring annual events", func(t *testing.T) {
+		config := Config{
+			Timezone:     "UTC",
+			CalendarName: "Test Calendar",
+			Events: []Event{
+				{
+					MonthDay:    "07-04",
+					Title:       "Independence Day",
+					Description: "Annual celebration",
+				},
+			},
+		}
+
+		var buf bytes.Buffer
+		err := generateICal(config, &buf)
+		if err != nil {
+			t.Fatalf("generateICal() error = %v", err)
+		}
+
+		output := buf.String()
+		currentYear := time.Now().Year()
+
+		// Check for required iCal components
+		checks := []string{
+			"BEGIN:VCALENDAR",
+			"END:VCALENDAR",
+			"NAME:Test Calendar",
+			"SUMMARY:Independence Day 💚",
+			"DESCRIPTION:Annual celebration",
+			fmt.Sprintf("DTSTART;VALUE=DATE:%d0704", currentYear-1),
+			fmt.Sprintf("DTSTART;VALUE=DATE:%d0704", currentYear),
+			fmt.Sprintf("DTSTART;VALUE=DATE:%d0704", currentYear+1),
+		}
+
+		for _, check := range checks {
+			if !strings.Contains(output, check) {
+				t.Errorf("generateICal() output missing %q", check)
+			}
+		}
+
+		// Ensure no duration is shown for recurring events
+		if strings.Contains(output, " - ") {
+			t.Error("Recurring events should not show duration")
+		}
+	})
 }
 
 func TestLoadConfig(t *testing.T) {

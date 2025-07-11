@@ -18,6 +18,8 @@ months = [1, 2, 3, 6, 9]
 days = [0, 7, 100, 1000, 10000]
 
 # Events to track (required)
+
+# Anniversary events - these create multiple calendar entries based on anniversary patterns
 [[events]]
 date = "2020-03-15"
 title = "Company Founded"
@@ -36,6 +38,25 @@ title = "Series A Funding"
 [[events]]
 date = "2023-01-10"
 title = "100th Employee"
+
+# Recurring annual events - these appear every year (previous, current, next)
+# Use month_day instead of date for events without a specific year
+[[events]]
+month_day = "01-01"
+title = "New Year's Day"
+
+[[events]]
+month_day = "07-14"
+title = "Bastille Day"
+description = "French National Day"
+
+[[events]]
+month_day = "12-25"
+title = "Christmas"
+
+[[events]]
+month_day = "10-31"
+title = "Halloween"
 
 # Minimal configuration example:
 # You can customize just what you need, for example only tracking

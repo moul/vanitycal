@@ -12,7 +12,8 @@ import (
 )
 
 type Event struct {
-	Date        string `toml:"date"`
+	Date        string `toml:"date"`        // YYYY-MM-DD for anniversaries
+	MonthDay    string `toml:"month_day"`   // MM-DD for recurring annual events
 	Title       string `toml:"title"`
 	Description string `toml:"description"`
 }
@@ -88,12 +89,27 @@ func validateConfig(config Config) error {
 		if event.Title == "" {
 			return fmt.Errorf("event %d: title is required", i+1)
 		}
-		if event.Date == "" {
-			return fmt.Errorf("event %d: date is required", i+1)
+		
+		// Check that exactly one of date or month_day is specified
+		if event.Date == "" && event.MonthDay == "" {
+			return fmt.Errorf("event %d: either date or month_day is required", i+1)
 		}
+		if event.Date != "" && event.MonthDay != "" {
+			return fmt.Errorf("event %d: cannot specify both date and month_day", i+1)
+		}
+		
 		// Validate date format
-		if _, err := time.Parse("2006-01-02", event.Date); err != nil {
-			return fmt.Errorf("event %d: invalid date format '%s' (expected YYYY-MM-DD)", i+1, event.Date)
+		if event.Date != "" {
+			if _, err := time.Parse("2006-01-02", event.Date); err != nil {
+				return fmt.Errorf("event %d: invalid date format '%s' (expected YYYY-MM-DD)", i+1, event.Date)
+			}
+		}
+		
+		// Validate month_day format
+		if event.MonthDay != "" {
+			if _, err := time.Parse("01-02", event.MonthDay); err != nil {
+				return fmt.Errorf("event %d: invalid month_day format '%s' (expected MM-DD)", i+1, event.MonthDay)
+			}
 		}
 	}
 
@@ -126,28 +142,55 @@ func generateICal(config Config, output io.Writer) error {
 	cal.SetCalscale("GREGORIAN")
 	cal.SetLastModified(time.Now()) // XXX: take last modification date of this binary AND the input.
 
+	currentYear := time.Now().Year()
+	
 	for _, event := range config.Events {
-		date, err := time.Parse("2006-01-02", event.Date)
-		if err != nil {
-			return fmt.Errorf("Error parsing date: %w", err)
-		}
-		anniversaries := getAnniversaries(date, config.Anniversaries)
-		for _, anniv := range anniversaries {
-			duration := getDuration(date, anniv)
-			uuid := fmt.Sprintf("vanitycal-%s", anniv.Format("20060102"))
-			icalEvent := cal.AddEvent(uuid)
-			summary := fmt.Sprintf("%s - %s 💚", event.Title, duration)
-			icalEvent.SetSummary(summary)
-			if event.Description != "" {
-				icalEvent.SetDescription(event.Description)
+		if event.Date != "" {
+			// Handle anniversary events (with full date)
+			date, err := time.Parse("2006-01-02", event.Date)
+			if err != nil {
+				return fmt.Errorf("Error parsing date: %w", err)
 			}
+			anniversaries := getAnniversaries(date, config.Anniversaries)
+			for _, anniv := range anniversaries {
+				duration := getDuration(date, anniv)
+				uuid := fmt.Sprintf("vanitycal-%s", anniv.Format("20060102"))
+				icalEvent := cal.AddEvent(uuid)
+				summary := fmt.Sprintf("%s - %s 💚", event.Title, duration)
+				icalEvent.SetSummary(summary)
+				if event.Description != "" {
+					icalEvent.SetDescription(event.Description)
+				}
 
-			// fullday
-			icalEvent.SetProperty(ical.ComponentPropertyDtStart, anniv.UTC().Format("20060102"), ical.WithValue("DATE"))
+				// fullday
+				icalEvent.SetProperty(ical.ComponentPropertyDtStart, anniv.UTC().Format("20060102"), ical.WithValue("DATE"))
 
-			// XXX: specific hours
-			//icalEvent.SetStartAt(anniv)
-			//icalEvent.SetEndAt(anniv.Add(24 * time.Hour))
+				// XXX: specific hours
+				//icalEvent.SetStartAt(anniv)
+				//icalEvent.SetEndAt(anniv.Add(24 * time.Hour))
+			}
+		} else if event.MonthDay != "" {
+			// Handle recurring annual events (month-day only)
+			// Generate for previous, current, and next year
+			monthDay, _ := time.Parse("01-02", event.MonthDay)
+			month := monthDay.Month()
+			day := monthDay.Day()
+			
+			for yearOffset := -1; yearOffset <= 1; yearOffset++ {
+				year := currentYear + yearOffset
+				eventDate := time.Date(year, month, day, 0, 0, 0, 0, time.UTC)
+				
+				uuid := fmt.Sprintf("vanitycal-recurring-%d%02d%02d", year, month, day)
+				icalEvent := cal.AddEvent(uuid)
+				summary := fmt.Sprintf("%s 💚", event.Title)
+				icalEvent.SetSummary(summary)
+				if event.Description != "" {
+					icalEvent.SetDescription(event.Description)
+				}
+				
+				// fullday
+				icalEvent.SetProperty(ical.ComponentPropertyDtStart, eventDate.Format("20060102"), ical.WithValue("DATE"))
+			}
 		}
 	}
 

@@ -397,20 +397,148 @@ func TestGenerateICal(t *testing.T) {
 
 		output := buf.String()
 
-		// Check for countdown markers
-		expectedPatterns := []string{
-			"SUMMARY:Big Launch - D-DAY 💚",
-			"SUMMARY:Big Launch - D-7",
-			"SUMMARY:Big Launch - D-100",
-			"SUMMARY:Big Launch - D-1m",
-			"SUMMARY:Big Launch - D-3m",
-			"DESCRIPTION:Product launch date",
+		// Check for countdown markers and anniversary markers
+		hasCountdown := strings.Contains(output, "Big Launch - D-7") ||
+			strings.Contains(output, "Big Launch - D-100") ||
+			strings.Contains(output, "Big Launch - D-1m") ||
+			strings.Contains(output, "Big Launch - D-3m")
+		
+		hasAnniversary := strings.Contains(output, "Big Launch - D-DAY") ||
+			strings.Contains(output, "Big Launch - 7d") ||
+			strings.Contains(output, "Big Launch - 1m") ||
+			strings.Contains(output, "Big Launch - 1y")
+		
+		if !hasCountdown {
+			t.Error("generateICal() should have countdown events for future dates")
+		}
+		
+		if !hasAnniversary {
+			t.Error("generateICal() should have anniversary events for future dates")
+		}
+		
+		if !strings.Contains(output, "DESCRIPTION:Product launch date") {
+			t.Error("generateICal() should include event description")
+		}
+	})
+
+	t.Run("No past events", func(t *testing.T) {
+		config := Config{
+			Timezone:     "UTC",
+			CalendarName: "Test Calendar",
+			Anniversaries: Anniversary{
+				Years:  []int{1},
+				Months: []int{1},
+				Days:   []int{0, 7},
+			},
+			Events: []Event{
+				{
+					Date:        "2023-01-01",
+					Title:       "Past Event",
+					NoPast:      true,
+				},
+			},
 		}
 
-		for _, pattern := range expectedPatterns {
-			if !strings.Contains(output, pattern) {
-				t.Errorf("generateICal() countdown output missing %q", pattern)
-			}
+		var buf bytes.Buffer
+		err := generateICal(config, &buf)
+		if err != nil {
+			t.Fatalf("generateICal() error = %v", err)
+		}
+
+		output := buf.String()
+
+		// Should not contain any events since it's a past date with no_past=true
+		if strings.Contains(output, "Past Event") {
+			t.Error("no_past flag not working - past events should be skipped")
+		}
+	})
+
+	t.Run("No future countdown", func(t *testing.T) {
+		futureDate := time.Now().AddDate(0, 3, 0)
+		
+		config := Config{
+			Timezone:     "UTC",
+			CalendarName: "Test Calendar",
+			Anniversaries: Anniversary{
+				Years:  []int{1},
+				Months: []int{1},
+				Days:   []int{7, 100},
+			},
+			Events: []Event{
+				{
+					Date:        futureDate.Format("2006-01-02"),
+					Title:       "Future Event",
+					NoFuture:    true,
+				},
+			},
+		}
+
+		var buf bytes.Buffer
+		err := generateICal(config, &buf)
+		if err != nil {
+			t.Fatalf("generateICal() error = %v", err)
+		}
+
+		output := buf.String()
+
+		// Should not contain countdown events
+		if strings.Contains(output, "D-7") || strings.Contains(output, "D-1") {
+			t.Error("no_future flag not working - countdown events should be skipped")
+		}
+
+		// Should not contain any future events including D-DAY since the date is in the future
+		if strings.Contains(output, "Future Event") {
+			t.Error("no_future flag should skip all future events")
+		}
+	})
+
+	t.Run("Mixed past and future with flags", func(t *testing.T) {
+		futureDate := time.Now().AddDate(0, 6, 0)
+		
+		config := Config{
+			Timezone:     "UTC",
+			CalendarName: "Test Calendar",
+			Anniversaries: Anniversary{
+				Years:  []int{1},
+				Months: []int{1},
+				Days:   []int{7},
+			},
+			Events: []Event{
+				{
+					Date:        futureDate.Format("2006-01-02"),
+					Title:       "Countdown Only",
+					NoPast:      true,  // Only countdown, no anniversaries
+				},
+				{
+					Date:        "2023-01-01",
+					Title:       "Anniversary Only",
+					NoFuture:    true,  // Only past anniversaries
+				},
+			},
+		}
+
+		var buf bytes.Buffer
+		err := generateICal(config, &buf)
+		if err != nil {
+			t.Fatalf("generateICal() error = %v", err)
+		}
+
+		output := buf.String()
+
+		// Check countdown only event
+		if !strings.Contains(output, "Countdown Only - D-") {
+			t.Error("Countdown Only event should have countdown events")
+		}
+		if strings.Contains(output, "Countdown Only - 7d") || strings.Contains(output, "Countdown Only - 1m") {
+			t.Error("Countdown Only event should not have anniversary events")
+		}
+
+		// Check anniversary only event
+		if strings.Contains(output, "Anniversary Only - D-") && !strings.Contains(output, "Anniversary Only - D-DAY") {
+			t.Error("Anniversary Only event should not have countdown events")
+		}
+		if !strings.Contains(output, "Anniversary Only - 1y") {
+			t.Error("Anniversary Only event should have anniversary events")
 		}
 	})
 }

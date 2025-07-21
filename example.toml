@@ -50,6 +50,19 @@ description = "Major milestone delivery"
 date = "2026-06-15"
 title = "Conference Talk"
 
+# Event filtering examples
+# Only generate countdown events (D-7, D-30, etc.), no anniversaries after the date
+[[events]]
+date = "2025-09-01"
+title = "Product Demo"
+no_past = true
+
+# Only generate anniversary events (skip future countdowns)
+[[events]]
+date = "2020-12-01"
+title = "First Customer"
+no_future = true
+
 # Recurring annual events - these appear every year (previous, current, next)
 # Use month_day instead of date for events without a specific year
 [[events]]

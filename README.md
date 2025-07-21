@@ -40,6 +40,17 @@ description = "Optional description"
 date = "2025-06-20"
 title = "Product Launch"  # Generates D-7, D-30, etc. AND 7d, 1y, etc.
 
+# Event filtering options
+[[events]]
+date = "2025-12-31"
+title = "Countdown Only"
+no_past = true  # Only countdown events (D-7, D-30), no anniversaries
+
+[[events]]
+date = "2020-01-01"
+title = "Anniversary Only"
+no_future = true  # Only past anniversaries (7d, 1y), no future events
+
 # Recurring annual events (no year)
 [[events]]
 month_day = "12-25"

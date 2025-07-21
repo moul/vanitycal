@@ -16,6 +16,8 @@ type Event struct {
 	MonthDay    string `toml:"month_day"`   // MM-DD for recurring annual events
 	Title       string `toml:"title"`
 	Description string `toml:"description"`
+	NoPast      bool   `toml:"no_past"`     // Skip past/anniversary events
+	NoFuture    bool   `toml:"no_future"`   // Skip future/countdown events
 }
 
 type Anniversary struct {
@@ -152,9 +154,9 @@ func generateICal(config Config, output io.Writer) error {
 			if err != nil {
 				return fmt.Errorf("Error parsing date: %w", err)
 			}
-			// For future dates, generate BOTH countdown and anniversary events
-			if date.After(time.Now()) {
-				// First, generate countdown events
+			// For future dates, generate countdown events (unless no_future is set)
+			if date.After(time.Now()) && !event.NoFuture {
+				// Generate countdown events
 				countdowns := getCountdowns(date, config.Anniversaries)
 				for _, countdown := range countdowns {
 					duration := getCountdownDuration(countdown, date)
@@ -171,24 +173,31 @@ func generateICal(config Config, output io.Writer) error {
 				}
 			}
 			
-			// Always generate anniversary events (for both past and future dates)
-			anniversaries := getAnniversaries(date, config.Anniversaries)
-			for _, anniv := range anniversaries {
-				duration := getDuration(date, anniv)
-				uuid := fmt.Sprintf("vanitycal-%s", anniv.Format("20060102"))
-				icalEvent := cal.AddEvent(uuid)
-				summary := fmt.Sprintf("%s - %s 💚", event.Title, duration)
-				icalEvent.SetSummary(summary)
-				if event.Description != "" {
-					icalEvent.SetDescription(event.Description)
+			// Generate anniversary events (unless no_past is set)
+			if !event.NoPast {
+				anniversaries := getAnniversaries(date, config.Anniversaries)
+				for _, anniv := range anniversaries {
+					// Skip future anniversaries if no_future is set (but keep D-DAY)
+					if event.NoFuture && anniv.After(time.Now()) && !anniv.Equal(date) {
+						continue
+					}
+					
+					duration := getDuration(date, anniv)
+					uuid := fmt.Sprintf("vanitycal-%s", anniv.Format("20060102"))
+					icalEvent := cal.AddEvent(uuid)
+					summary := fmt.Sprintf("%s - %s 💚", event.Title, duration)
+					icalEvent.SetSummary(summary)
+					if event.Description != "" {
+						icalEvent.SetDescription(event.Description)
+					}
+
+					// fullday
+					icalEvent.SetProperty(ical.ComponentPropertyDtStart, anniv.UTC().Format("20060102"), ical.WithValue("DATE"))
+
+					// XXX: specific hours
+					//icalEvent.SetStartAt(anniv)
+					//icalEvent.SetEndAt(anniv.Add(24 * time.Hour))
 				}
-
-				// fullday
-				icalEvent.SetProperty(ical.ComponentPropertyDtStart, anniv.UTC().Format("20060102"), ical.WithValue("DATE"))
-
-				// XXX: specific hours
-				//icalEvent.SetStartAt(anniv)
-				//icalEvent.SetEndAt(anniv.Add(24 * time.Hour))
 			}
 		} else if event.MonthDay != "" {
 			// Handle recurring annual events (month-day only)

@@ -405,13 +405,13 @@ func getDuration(start, end time.Time) string {
 	if years > 0 {
 		testDate := start.AddDate(years, 0, 0)
 		if testDate.Equal(end) {
-			return fmt.Sprintf("%dy", years)
+			return fmt.Sprintf("D+%dy", years)
 		}
 		// Special case for leap year Feb 29 -> Feb 28
 		if start.Month() == 2 && start.Day() == 29 && end.Month() == 2 && end.Day() == 28 {
 			if testDate.Month() == 3 && testDate.Day() == 1 {
 				// AddDate moved us to March 1, but we want Feb 28
-				return fmt.Sprintf("%dy", years)
+				return fmt.Sprintf("D+%dy", years)
 			}
 		}
 	}
@@ -424,24 +424,24 @@ func getDuration(start, end time.Time) string {
 				y := months / 12
 				m := months % 12
 				if m == 0 {
-					return fmt.Sprintf("%dy", y)
+					return fmt.Sprintf("D+%dy", y)
 				}
-				return fmt.Sprintf("%dy %dm", y, m)
+				return fmt.Sprintf("D+%dy %dm", y, m)
 			}
-			return fmt.Sprintf("%dm", months)
+			return fmt.Sprintf("D+%dm", months)
 		}
 	}
 
 	// Check for specific day milestones
 	switch totalDays {
 	case 7:
-		return "7d"
+		return "D+7d"
 	case 100:
-		return "100d"
+		return "D+100d"
 	case 1000:
-		return "1000d"
+		return "D+1000d"
 	case 10000:
-		return "10000d"
+		return "D+10000d"
 	}
 
 	// For other cases, calculate years, months, and days
@@ -469,19 +469,19 @@ func getDuration(start, end time.Time) string {
 
 	// Format the output based on what's non-zero
 	if years > 0 && months == 0 && days == 0 {
-		return fmt.Sprintf("%dy", years)
+		return fmt.Sprintf("D+%dy", years)
 	} else if years > 0 && months > 0 && days == 0 {
-		return fmt.Sprintf("%dy %dm", years, months)
+		return fmt.Sprintf("D+%dy+%dm", years, months)
 	} else if years > 0 && days > 0 && months == 0 {
-		return fmt.Sprintf("%dy %dd", years, days)
+		return fmt.Sprintf("D+%dy+%dd", years, days)
 	} else if months > 0 && days == 0 {
-		return fmt.Sprintf("%dm", months)
+		return fmt.Sprintf("D+%dm", months)
 	} else if months > 0 && days > 0 && years == 0 {
-		return fmt.Sprintf("%dm %dd", months, days)
+		return fmt.Sprintf("D+%dm %dd", months, days)
 	} else if days > 0 {
-		return fmt.Sprintf("%dd", days)
+		return fmt.Sprintf("D+%dd", days)
 	}
 
 	// Fallback for any edge case
-	return fmt.Sprintf("%dy %dm %dd", years, months, days)
+	return fmt.Sprintf("D+%dy+%dm+%dd", years, months, days)
 }

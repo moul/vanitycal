@@ -48,16 +48,16 @@ func TestGetDuration(t *testing.T) {
 		expected string
 	}{
 		{"D-Day", "2023-01-01", "2023-01-01", "D-DAY"},
-		{"7 days", "2023-01-01", "2023-01-08", "7d"},
-		{"1 month", "2023-01-01", "2023-02-01", "1m"},
-		{"1 year", "2023-01-01", "2024-01-01", "1y"},
-		{"2 years 3 months", "2023-01-01", "2025-04-01", "2y 3m"},
-		{"1 year 15 days", "2023-01-01", "2024-01-16", "1y 15d"},
-		{"6 months 10 days", "2023-01-01", "2023-07-11", "6m 10d"},
-		{"100 days", "2023-01-01", "2023-04-11", "100d"},
-		{"Leap year handling", "2020-02-29", "2021-02-28", "1y"},
-		{"Month boundary", "2023-01-31", "2023-02-28", "28d"},
-		{"Year boundary", "2022-12-31", "2023-01-01", "1d"},
+		{"7 days", "2023-01-01", "2023-01-08", "D+7d"},
+		{"1 month", "2023-01-01", "2023-02-01", "D+1m"},
+		{"1 year", "2023-01-01", "2024-01-01", "D+1y"},
+		{"2 years 3 months", "2023-01-01", "2025-04-01", "D+2y 3m"},
+		{"1 year 15 days", "2023-01-01", "2024-01-16", "D+1y+15d"},
+		{"6 months 10 days", "2023-01-01", "2023-07-11", "D+6m 10d"},
+		{"100 days", "2023-01-01", "2023-04-11", "D+100d"},
+		{"Leap year handling", "2020-02-29", "2021-02-28", "D+1y"},
+		{"Month boundary", "2023-01-31", "2023-02-28", "D+28d"},
+		{"Year boundary", "2022-12-31", "2023-01-01", "D+1d"},
 	}
 
 	for _, tt := range tests {
@@ -311,8 +311,8 @@ func TestGenerateICal(t *testing.T) {
 			"END:VEVENT",
 			"SUMMARY:Test Event - D-DAY 💚",
 			"DESCRIPTION:Test Description",
-			"SUMMARY:Test Event - 1m 💚",
-			"SUMMARY:Test Event - 1y 💚",
+			"SUMMARY:Test Event - D+1m 💚",
+			"SUMMARY:Test Event - D+1y 💚",
 		}
 
 		for _, check := range checks {
@@ -404,9 +404,9 @@ func TestGenerateICal(t *testing.T) {
 			strings.Contains(output, "Big Launch - D-3m")
 		
 		hasAnniversary := strings.Contains(output, "Big Launch - D-DAY") ||
-			strings.Contains(output, "Big Launch - 7d") ||
-			strings.Contains(output, "Big Launch - 1m") ||
-			strings.Contains(output, "Big Launch - 1y")
+			strings.Contains(output, "Big Launch - D+7d") ||
+			strings.Contains(output, "Big Launch - D+1m") ||
+			strings.Contains(output, "Big Launch - D+1y")
 		
 		if !hasCountdown {
 			t.Error("generateICal() should have countdown events for future dates")
@@ -529,7 +529,7 @@ func TestGenerateICal(t *testing.T) {
 		if !strings.Contains(output, "Countdown Only - D-") {
 			t.Error("Countdown Only event should have countdown events")
 		}
-		if strings.Contains(output, "Countdown Only - 7d") || strings.Contains(output, "Countdown Only - 1m") {
+		if strings.Contains(output, "Countdown Only - D+7d") || strings.Contains(output, "Countdown Only - D+1m") {
 			t.Error("Countdown Only event should not have anniversary events")
 		}
 
@@ -537,7 +537,7 @@ func TestGenerateICal(t *testing.T) {
 		if strings.Contains(output, "Anniversary Only - D-") && !strings.Contains(output, "Anniversary Only - D-DAY") {
 			t.Error("Anniversary Only event should not have countdown events")
 		}
-		if !strings.Contains(output, "Anniversary Only - 1y") {
+		if !strings.Contains(output, "Anniversary Only - D+1y") {
 			t.Error("Anniversary Only event should have anniversary events")
 		}
 	})
